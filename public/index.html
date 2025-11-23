@@ -1,78 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8"/>
   <title>Rohan's Voice Interview Bot</title>
 </head>
-<body style="font-family:Arial;padding:20px;">
-<h2>Rohan's Voice Interview Bot</h2>
+<body>
+  <h1>Rohan's Voice Interview Bot</h1>
 
-<button id="mic">🎤 Start Talking</button>
-<p id="status">Status: Ready</p>
+  <button onclick="start()">🎙 Start Talking</button>
+  <p>Status: <span id="status">Ready</span></p>
 
-<h3>You asked:</h3>
-<div id="you">—</div>
+  <h3>You asked:</h3>
+  <p id="question"></p>
 
-<h3>Rohan replied:</h3>
-<div id="bot">—</div>
+  <h3>Rohan replied:</h3>
+  <p id="answer"></p>
 
-<p>Or type a question:</p>
-<input id="text" placeholder="Ask a question..." style="width:60%;"/>
-<button onclick="sendText()">Send</button>
+  <h3>Or type a question:</h3>
+  <input id="textInput" placeholder="Ask a question..." style="width:400px;">
+  <button onclick="sendText()">Send</button>
 
-<script>
-const you=document.getElementById("you");
-const bot=document.getElementById("bot");
-const statusEl=document.getElementById("status");
-const input=document.getElementById("text");
-const mic=document.getElementById("mic");
+  <script>
+    async function sendText() {
+      const input = document.getElementById("textInput").value;
+      document.getElementById("question").innerText = input;
 
-let rec=null;
-if("webkitSpeechRecognition" in window){
-  rec=new webkitSpeechRecognition();
-  rec.lang="en-US";
-  rec.onstart=()=>statusEl.innerText="Status: Listening…";
-  rec.onend=()=>statusEl.innerText="Status: Thinking…";
-  rec.onerror=()=>statusEl.innerText="Status: Speech error";
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input })
+      });
 
-  rec.onresult=e=>{
-    const msg=e.results[0][0].transcript;
-    handle(msg);
-  };
-  mic.onclick=()=>rec.start();
-} else {
-  mic.disabled=true;
-  mic.innerText="🎤 Voice not supported in this browser";
-}
-
-async function handle(msg){
-  you.innerText=msg;
-  bot.innerText="Thinking…";
-
-  const r=await fetch("/api/chat",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({userMessage:msg})
-  });
-  const d=await r.json();
-  bot.innerText=d.reply || "No reply from AI.";
-
-  if("speechSynthesis" in window){
-    const u=new SpeechSynthesisUtterance(d.reply);
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  }
-
-  statusEl.innerText="Status: Ready";
-}
-
-function sendText(){
-  if(input.value.trim()){
-    handle(input.value);
-    input.value="";
-  }
-}
-</script>
+      const data = await res.json();
+      document.getElementById("answer").innerText = data.reply;
+    }
+  </script>
 </body>
 </html>
-

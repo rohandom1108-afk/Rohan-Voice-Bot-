@@ -1,38 +1,200 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Rohan's Voice Interview Bot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    #status {
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+    .label {
+      font-weight: 600;
+      margin-top: 16px;
+    }
+    #question, #answer {
+      margin-top: 4px;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      min-height: 24px;
+    }
+    #answer {
+      background: #f7f7f7;
+    }
+    #inputRow {
+      margin-top: 20px;
+    }
+    input[type="text"] {
+      padding: 8px;
+      width: 70%;
+      max-width: 400px;
+    }
+    button {
+      padding: 8px 12px;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    #startBtn {
+      margin-bottom: 12px;
+    }
+    #note {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
   <h1>Rohan's Voice Interview Bot</h1>
 
-  <button onclick="start()">🎙 Start Talking</button>
-  <p>Status: <span id="status">Ready</span></p>
+  <button id="startBtn">🎙️ Start Talking</button>
+  <div id="status">Status: Ready</div>
 
-  <h3>You asked:</h3>
-  <p id="question"></p>
+  <div class="label">You asked:</div>
+  <div id="question">(nothing yet)</div>
 
-  <h3>Rohan replied:</h3>
-  <p id="answer"></p>
+  <div class="label">Rohan replied:</div>
+  <div id="answer">(no reply yet)</div>
 
-  <h3>Or type a question:</h3>
-  <input id="textInput" placeholder="Ask a question..." style="width:400px;">
-  <button onclick="sendText()">Send</button>
+  <div class="label">Or type a question:</div>
+  <div id="inputRow">
+    <input id="textInput" type="text" placeholder="Ask a question..." />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <div id="note">
+    Note: Voice input/output may not work in all browsers.
+    Use Chrome on desktop for best results, and make sure your tab is not muted.
+  </div>
 
   <script>
-    async function sendText() {
-      const input = document.getElementById("textInput").value;
-      document.getElementById("question").innerText = input;
+    const statusEl = document.getElementById("status");
+    const questionEl = document.getElementById("question");
+    const answerEl = document.getElementById("answer");
+    const startBtn = document.getElementById("startBtn");
+    const textInput = document.getElementById("textInput");
+    const sendBtn = document.getElementById("sendBtn");
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input })
-      });
+    // -------------------
+    // Speech synthesis
+    // -------------------
+    function speak(text) {
+      if (!("speechSynthesis" in window)) {
+        console.warn("Speech Synthesis not supported in this browser.");
+        return;
+      }
 
-      const data = await res.json();
-      document.getElementById("answer").innerText = data.reply;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-IN"; // sounds nicer for you
+      utterance.rate = 1;
+      utterance.pitch = 1;
+
+      // Stop anything that's currently speaking
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
     }
+
+    function setStatus(text) {
+      statusEl.textContent = "Status: " + text;
+    }
+
+    async function sendToBot(message) {
+      if (!message.trim()) return;
+
+      questionEl.textContent = message;
+      setStatus("Thinking...");
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+
+        const data = await res.json();
+        const reply = data.reply || "I'm not sure what to say yet.";
+
+        answerEl.textContent = reply;
+        setStatus("Ready");
+
+        // 🔊 Speak the reply
+        speak(reply);
+      } catch (err) {
+        console.error(err);
+        setStatus("Error talking to the server");
+        answerEl.textContent =
+          "Sorry, something went wrong. Please try again in a moment.";
+      }
+    }
+
+    // -------------------
+    // Text input flow
+    // -------------------
+    sendBtn.addEventListener("click", () => {
+      const message = textInput.value;
+      textInput.value = "";
+      sendToBot(message);
+    });
+
+    textInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        sendBtn.click();
+      }
+    });
+
+    // -------------------
+    // Voice input (SpeechRecognition)
+    // -------------------
+    let recognition = null;
+
+    if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
+      const SR =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SR();
+      recognition.lang = "en-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setStatus("Listening...");
+      };
+
+      recognition.onend = () => {
+        setStatus("Ready");
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error", event);
+        setStatus("Voice error: " + event.error);
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        textInput.value = transcript;
+        sendToBot(transcript);
+      };
+    } else {
+      // No voice recognition, disable button label
+      startBtn.textContent = "🎙️ Voice not supported in this browser";
+      startBtn.disabled = true;
+    }
+
+    startBtn.addEventListener("click", () => {
+      if (!recognition) return;
+      recognition.start();
+    });
   </script>
 </body>
 </html>

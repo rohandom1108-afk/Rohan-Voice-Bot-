@@ -5,180 +5,498 @@
   <title>Rohan's Voice Interview Bot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    :root {
+      --bg: #020617;
+      --card: #0b1220;
+      --accent: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.15);
+      --user-bubble: #22c55e;
+      --bot-bubble: #1e293b;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --danger: #f97373;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 800px;
-      margin: auto;
-      line-height: 1.5;
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: radial-gradient(circle at top, #1e293b, #020617 55%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
     }
-    button {
-      padding: 10px 14px;
-      margin-top: 10px;
-      cursor: pointer;
-      font-size: 16px;
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.25);
     }
-    input {
-      padding: 10px;
-      width: 70%;
-      font-size: 16px;
+
+    .header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+      background: linear-gradient(to right, #020617, #0b1120);
     }
-    #question, #answer {
-      border: 1px solid #ccc;
-      padding: 10px;
-      min-height: 20px;
-      margin-top: 5px;
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #22c55e, #15803d);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      color: #e5e7eb;
+      box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9);
     }
-    #answer {
-      background: #f3f3f3;
+
+    .header-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .header-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .status-pill {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-muted);
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background-color: #22c55e;
+    }
+
+    .chat {
+      flex: 1;
+      padding: 12px 12px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+    }
+
+    .chat::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.7);
+      border-radius: 999px;
+    }
+
+    .msg-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .msg-row.user {
+      justify-content: flex-end;
+    }
+
+    .msg-bubble {
+      max-width: 75%;
+      padding: 8px 10px;
+      border-radius: 16px;
+      font-size: 13px;
+      line-height: 1.4;
+      position: relative;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    .msg-row.user .msg-bubble {
+      background: var(--user-bubble);
+      color: #022c22;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg-row.bot .msg-bubble {
+      background: var(--bot-bubble);
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    .msg-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .typing {
+      display: inline-flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .typing-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background-color: var(--text-muted);
+      animation: blink 1.2s infinite;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 0.3; transform: translateY(0); }
+      25% { opacity: 1; transform: translateY(-1px); }
+    }
+
+    .footer {
+      padding: 8px 10px 10px;
+      border-top: 1px solid rgba(148, 163, 184, 0.25);
+      background: #020617;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .top-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .unlock-btn {
+      flex: 1;
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .unlock-btn.enabled {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .mic-btn {
+      width: 40px;
+      border-radius: 999px;
+      border: none;
+      background: var(--accent-soft);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .mic-btn.listening {
+      animation: pulse 1.1s infinite;
+      background: rgba(248, 113, 113, 0.1);
+      color: #f97373;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.35);
+      }
+      70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(248, 113, 113, 0);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(248, 113, 113, 0);
+      }
+    }
+
+    .input-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .input-row input {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: #020617;
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .input-row input::placeholder {
+      color: rgba(148, 163, 184, 0.8);
+    }
+
+    .send-btn {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #022c22;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .hint {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    @media (max-width: 480px) {
+      .app {
+        max-width: 100%;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="app">
+    <div class="header">
+      <div class="avatar">R</div>
+      <div class="header-text">
+        <div class="header-title">Rohan – Interview Bot</div>
+        <div class="header-sub">Ask me about my story, strengths, growth & more.</div>
+      </div>
+      <div class="status-pill" id="status-pill">
+        <span class="dot"></span><span>Ready</span>
+      </div>
+    </div>
 
-  <h2>Rohan's Voice Interview Bot</h2>
+    <div class="chat" id="chat"></div>
 
-  <button id="unlockBtn">🔓 Tap to Enable Voice</button><br>
-  <button id="startBtn" disabled>🎤 Start Talking</button>
-  <div id="status">Status: Waiting for voice unlock...</div>
-
-  <h3>You asked:</h3>
-  <div id="question">(nothing yet)</div>
-
-  <h3>Rohan replied:</h3>
-  <div id="answer">(no reply yet)</div>
-
-  <h3>Or type your question:</h3>
-  <input id="textInput" placeholder="Ask something..." />
-  <button id="sendBtn">Send</button>
+    <div class="footer">
+      <div class="top-row">
+        <button id="unlockBtn" class="unlock-btn">🔓 Tap once to enable voice</button>
+        <button id="micBtn" class="mic-btn" disabled>🎙</button>
+      </div>
+      <div class="input-row">
+        <input
+          id="textInput"
+          type="text"
+          placeholder="Type a question, e.g. 'What's your #1 superpower?'"
+        />
+        <button id="sendBtn" class="send-btn">
+          <span>Send</span> <span>➤</span>
+        </button>
+      </div>
+      <div class="hint">Tip: Use Chrome on desktop or Android for best voice support.</div>
+    </div>
+  </div>
 
   <script>
+    const chatEl = document.getElementById("chat");
     const unlockBtn = document.getElementById("unlockBtn");
-    const startBtn = document.getElementById("startBtn");
-    const statusEl = document.getElementById("status");
-    const questionEl = document.getElementById("question");
-    const answerEl = document.getElementById("answer");
+    const micBtn = document.getElementById("micBtn");
     const textInput = document.getElementById("textInput");
     const sendBtn = document.getElementById("sendBtn");
+    const statusPill = document.getElementById("status-pill");
 
     let voiceUnlocked = false;
+    let recognition = null;
+    let isListening = false;
+    let isTyping = false;
 
-    // ---------------------------
-    // 1️⃣ Unlock voice on mobile
-    // ---------------------------
+    function setStatus(text, color = "#22c55e") {
+      const span = statusPill.querySelector("span:last-child");
+      const dot = statusPill.querySelector(".dot");
+      span.textContent = text;
+      dot.style.backgroundColor = color;
+    }
+
+    function scrollToBottom() {
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function addMessage(text, sender = "bot", options = {}) {
+      const row = document.createElement("div");
+      row.className = "msg-row " + sender;
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+      bubble.textContent = text;
+
+      if (options.typing) {
+        bubble.textContent = "";
+        const typing = document.createElement("div");
+        typing.className = "typing";
+        ["dot", "dot", "dot"].forEach(() => {
+          const d = document.createElement("div");
+          d.className = "typing-dot";
+          typing.appendChild(d);
+        });
+        bubble.appendChild(typing);
+      }
+
+      row.appendChild(bubble);
+      chatEl.appendChild(row);
+      scrollToBottom();
+      return { row, bubble };
+    }
+
+    function speak(text) {
+      if (!voiceUnlocked) return;
+      if (!("speechSynthesis" in window)) return;
+
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-IN";
+      u.rate = 1;
+      u.pitch = 1;
+      window.speechSynthesis.speak(u);
+    }
+
     unlockBtn.addEventListener("click", () => {
-      const test = new SpeechSynthesisUtterance("Voice unlocked");
+      if (!("speechSynthesis" in window)) {
+        unlockBtn.textContent = "Voice not supported on this browser";
+        return;
+      }
+
+      const test = new SpeechSynthesisUtterance("Voice enabled.");
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(test);
 
       voiceUnlocked = true;
-      unlockBtn.disabled = true;
-      unlockBtn.innerText = "🔓 Voice Enabled";
-      startBtn.disabled = false;
-
-      statusEl.textContent = "Status: Voice enabled. You can talk now.";
+      unlockBtn.classList.add("enabled");
+      unlockBtn.textContent = "🔓 Voice enabled";
+      micBtn.disabled = false;
+      setStatus("Ready");
     });
 
-    // ---------------------------
-    // 2️⃣ Speak function (safe)
-    // ---------------------------
-    function speak(text) {
-      if (!voiceUnlocked) {
-        console.warn("Voice still locked. User must tap unlock button first.");
-        return;
-      }
+    async function sendToBot(message) {
+      if (!message.trim()) return;
+      addMessage(message, "user");
+      textInput.value = "";
 
-      if (!("speechSynthesis" in window)) {
-        console.warn("Speech synthesis not supported.");
-        return;
-      }
-
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "en-IN";
-      utter.rate = 1;
-      utter.pitch = 1;
-
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utter);
-    }
-
-    // ---------------------------
-    // 3️⃣ Send text to API
-    // ---------------------------
-    async function sendToBot(msg) {
-      questionEl.textContent = msg;
-      statusEl.textContent = "Status: Thinking...";
+      setStatus("Thinking...", "#fbbf24");
+      const typingMsg = addMessage("", "bot", { typing: true });
+      isTyping = true;
 
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: msg }),
+          body: JSON.stringify({ message }),
         });
 
         const data = await res.json();
-        const reply = data.reply || "Sorry, I couldn't think of a reply.";
+        const reply =
+          data.reply || "I'm not sure what to say yet, but I'm thinking about it.";
 
-        answerEl.textContent = reply;
-        statusEl.textContent = "Status: Ready";
-
-        // 🔊 SPEAK HERE
+        typingMsg.bubble.textContent = reply;
+        isTyping = false;
+        setStatus("Ready", "#22c55e");
         speak(reply);
-
       } catch (err) {
         console.error(err);
-        statusEl.textContent = "Error communicating with server.";
-        answerEl.textContent = "Something went wrong, please try again.";
+        typingMsg.bubble.textContent =
+          "Something went wrong talking to the AI. Please try again in a moment.";
+        isTyping = false;
+        setStatus("Error", "#f97373");
       }
     }
 
-    // ---------------------------
-    // 4️⃣ Text input handling
-    // ---------------------------
     sendBtn.addEventListener("click", () => {
-      const msg = textInput.value;
-      textInput.value = "";
-      sendToBot(msg);
+      sendToBot(textInput.value);
     });
 
     textInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") sendBtn.click();
+      if (e.key === "Enter") {
+        sendToBot(textInput.value);
+      }
     });
 
-    // ---------------------------
-    // 5️⃣ Voice input (Android only)
-    // ---------------------------
-    let recognition = null;
-
     if ("webkitSpeechRecognition" in window) {
-      recognition = new webkitSpeechRecognition();
+      const SR = window.webkitSpeechRecognition;
+      recognition = new SR();
       recognition.lang = "en-IN";
       recognition.interimResults = false;
 
       recognition.onstart = () => {
-        statusEl.textContent = "Status: Listening...";
-      };
-      recognition.onerror = () => {
-        statusEl.textContent = "Status: Error using voice.";
-      };
-      recognition.onend = () => {
-        statusEl.textContent = "Status: Ready";
+        isListening = true;
+        micBtn.classList.add("listening");
+        setStatus("Listening...", "#f97373");
       };
 
-      recognition.onresult = (event) => {
-        const msg = event.results[0][0].transcript;
-        sendToBot(msg);
+      recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.remove("listening");
+        if (!isTyping) setStatus("Ready", "#22c55e");
       };
+
+      recognition.onerror = (e) => {
+        console.error("Speech error", e);
+        isListening = false;
+        micBtn.classList.remove("listening");
+        setStatus("Voice error", "#f97373");
+      };
+
+      recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        sendToBot(text);
+      };
+
+      micBtn.addEventListener("click", () => {
+        if (recognition && !isListening) recognition.start();
+      });
     } else {
-      startBtn.innerText = "🎤 Voice not supported on this device";
-      startBtn.disabled = true;
+      micBtn.disabled = true;
+      micBtn.textContent = "🚫";
+      micBtn.title = "Voice input not supported on this device";
     }
 
-    // Start listening
-    startBtn.addEventListener("click", () => {
-      if (recognition) recognition.start();
-    });
+    addMessage(
+      "Hey, I'm Rohan. Ask me about my life story, strengths, weaknesses, growth areas, or how I push my limits. You can speak or type.",
+      "bot"
+    );
   </script>
-
 </body>
 </html>

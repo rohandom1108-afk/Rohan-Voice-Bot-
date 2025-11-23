@@ -6,195 +6,179 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding: 24px;
-      max-width: 900px;
-      margin: 0 auto;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
       line-height: 1.5;
     }
-    h1 {
-      margin-top: 0;
+    button {
+      padding: 10px 14px;
+      margin-top: 10px;
+      cursor: pointer;
+      font-size: 16px;
     }
-    #status {
-      margin-bottom: 16px;
-      font-weight: 600;
-    }
-    .label {
-      font-weight: 600;
-      margin-top: 16px;
+    input {
+      padding: 10px;
+      width: 70%;
+      font-size: 16px;
     }
     #question, #answer {
-      margin-top: 4px;
-      padding: 8px;
-      border-radius: 4px;
       border: 1px solid #ccc;
-      min-height: 24px;
+      padding: 10px;
+      min-height: 20px;
+      margin-top: 5px;
     }
     #answer {
-      background: #f7f7f7;
-    }
-    #inputRow {
-      margin-top: 20px;
-    }
-    input[type="text"] {
-      padding: 8px;
-      width: 70%;
-      max-width: 400px;
-    }
-    button {
-      padding: 8px 12px;
-      margin-left: 8px;
-      cursor: pointer;
-    }
-    #startBtn {
-      margin-bottom: 12px;
-    }
-    #note {
-      margin-top: 16px;
-      font-size: 0.9rem;
-      color: #666;
+      background: #f3f3f3;
     }
   </style>
 </head>
 <body>
-  <h1>Rohan's Voice Interview Bot</h1>
 
-  <button id="startBtn">🎙️ Start Talking</button>
-  <div id="status">Status: Ready</div>
+  <h2>Rohan's Voice Interview Bot</h2>
 
-  <div class="label">You asked:</div>
+  <button id="unlockBtn">🔓 Tap to Enable Voice</button><br>
+  <button id="startBtn" disabled>🎤 Start Talking</button>
+  <div id="status">Status: Waiting for voice unlock...</div>
+
+  <h3>You asked:</h3>
   <div id="question">(nothing yet)</div>
 
-  <div class="label">Rohan replied:</div>
+  <h3>Rohan replied:</h3>
   <div id="answer">(no reply yet)</div>
 
-  <div class="label">Or type a question:</div>
-  <div id="inputRow">
-    <input id="textInput" type="text" placeholder="Ask a question..." />
-    <button id="sendBtn">Send</button>
-  </div>
-
-  <div id="note">
-    Note: Voice input/output may not work in all browsers.
-    Use Chrome on desktop for best results, and make sure your tab is not muted.
-  </div>
+  <h3>Or type your question:</h3>
+  <input id="textInput" placeholder="Ask something..." />
+  <button id="sendBtn">Send</button>
 
   <script>
+    const unlockBtn = document.getElementById("unlockBtn");
+    const startBtn = document.getElementById("startBtn");
     const statusEl = document.getElementById("status");
     const questionEl = document.getElementById("question");
     const answerEl = document.getElementById("answer");
-    const startBtn = document.getElementById("startBtn");
     const textInput = document.getElementById("textInput");
     const sendBtn = document.getElementById("sendBtn");
 
-    // -------------------
-    // Speech synthesis
-    // -------------------
+    let voiceUnlocked = false;
+
+    // ---------------------------
+    // 1️⃣ Unlock voice on mobile
+    // ---------------------------
+    unlockBtn.addEventListener("click", () => {
+      const test = new SpeechSynthesisUtterance("Voice unlocked");
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(test);
+
+      voiceUnlocked = true;
+      unlockBtn.disabled = true;
+      unlockBtn.innerText = "🔓 Voice Enabled";
+      startBtn.disabled = false;
+
+      statusEl.textContent = "Status: Voice enabled. You can talk now.";
+    });
+
+    // ---------------------------
+    // 2️⃣ Speak function (safe)
+    // ---------------------------
     function speak(text) {
-      if (!("speechSynthesis" in window)) {
-        console.warn("Speech Synthesis not supported in this browser.");
+      if (!voiceUnlocked) {
+        console.warn("Voice still locked. User must tap unlock button first.");
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-IN"; // sounds nicer for you
-      utterance.rate = 1;
-      utterance.pitch = 1;
+      if (!("speechSynthesis" in window)) {
+        console.warn("Speech synthesis not supported.");
+        return;
+      }
 
-      // Stop anything that's currently speaking
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "en-IN";
+      utter.rate = 1;
+      utter.pitch = 1;
+
       window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utter);
     }
 
-    function setStatus(text) {
-      statusEl.textContent = "Status: " + text;
-    }
-
-    async function sendToBot(message) {
-      if (!message.trim()) return;
-
-      questionEl.textContent = message;
-      setStatus("Thinking...");
+    // ---------------------------
+    // 3️⃣ Send text to API
+    // ---------------------------
+    async function sendToBot(msg) {
+      questionEl.textContent = msg;
+      statusEl.textContent = "Status: Thinking...";
 
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
+          body: JSON.stringify({ message: msg }),
         });
 
         const data = await res.json();
-        const reply = data.reply || "I'm not sure what to say yet.";
+        const reply = data.reply || "Sorry, I couldn't think of a reply.";
 
         answerEl.textContent = reply;
-        setStatus("Ready");
+        statusEl.textContent = "Status: Ready";
 
-        // 🔊 Speak the reply
+        // 🔊 SPEAK HERE
         speak(reply);
+
       } catch (err) {
         console.error(err);
-        setStatus("Error talking to the server");
-        answerEl.textContent =
-          "Sorry, something went wrong. Please try again in a moment.";
+        statusEl.textContent = "Error communicating with server.";
+        answerEl.textContent = "Something went wrong, please try again.";
       }
     }
 
-    // -------------------
-    // Text input flow
-    // -------------------
+    // ---------------------------
+    // 4️⃣ Text input handling
+    // ---------------------------
     sendBtn.addEventListener("click", () => {
-      const message = textInput.value;
+      const msg = textInput.value;
       textInput.value = "";
-      sendToBot(message);
+      sendToBot(msg);
     });
 
     textInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        sendBtn.click();
-      }
+      if (e.key === "Enter") sendBtn.click();
     });
 
-    // -------------------
-    // Voice input (SpeechRecognition)
-    // -------------------
+    // ---------------------------
+    // 5️⃣ Voice input (Android only)
+    // ---------------------------
     let recognition = null;
 
-    if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
-      const SR =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SR();
+    if ("webkitSpeechRecognition" in window) {
+      recognition = new webkitSpeechRecognition();
       recognition.lang = "en-IN";
       recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
-        setStatus("Listening...");
+        statusEl.textContent = "Status: Listening...";
       };
-
+      recognition.onerror = () => {
+        statusEl.textContent = "Status: Error using voice.";
+      };
       recognition.onend = () => {
-        setStatus("Ready");
-      };
-
-      recognition.onerror = (event) => {
-        console.error("Speech recognition error", event);
-        setStatus("Voice error: " + event.error);
+        statusEl.textContent = "Status: Ready";
       };
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        textInput.value = transcript;
-        sendToBot(transcript);
+        const msg = event.results[0][0].transcript;
+        sendToBot(msg);
       };
     } else {
-      // No voice recognition, disable button label
-      startBtn.textContent = "🎙️ Voice not supported in this browser";
+      startBtn.innerText = "🎤 Voice not supported on this device";
       startBtn.disabled = true;
     }
 
+    // Start listening
     startBtn.addEventListener("click", () => {
-      if (!recognition) return;
-      recognition.start();
+      if (recognition) recognition.start();
     });
   </script>
+
 </body>
 </html>
